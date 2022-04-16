@@ -1,4 +1,4 @@
-# docker-scripts
+# Docker Scripts
 
 Useful docker scripts for rapidly creating dev environments
 
