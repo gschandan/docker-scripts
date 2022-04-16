@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  postgres:
+    image: "postgres:${POSTGRES_VERSION}"
+    container_name: postgres
+    ports:
+      - "${POSTGRES_HOSTPORT}:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgres #Data volume
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_VERSION: ${POSTGRES_VERSION:-10.20}
+      POSTGRES_HOSTPORT: ${POSTGRES_HOSTPORT:-5555}
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: 50M
