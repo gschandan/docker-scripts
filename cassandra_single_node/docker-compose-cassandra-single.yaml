@@ -1,0 +1,30 @@
+#Credit to https://blog.digitalis.io/containerized-cassandra-cluster-for-local-testing-60d24d70dcc4
+#and https://github.com/digitalis-io/ccc
+
+version: "3.8"
+networks:
+  cassandra:
+services:
+  node:
+    image: cassandra:4.0.3
+    container_name: node
+    hostname: node
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - cassandra
+    ports:
+      - "9042:9042"
+    volumes:
+      - ./data/node:/var/lib/cassandra #Data volume
+      - ./etc/node:/etc/cassandra #Config file volume
+    environment: &environment
+      CASSANDRA_SEEDS: "node"
+      CASSANDRA_CLUSTER_NAME: CassandraClusterTesting
+      CASSANDRA_DC: TestDataCentre
+      CASSANDRA_RACK: TestRack
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_NUM_TOKENS: 128

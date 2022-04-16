@@ -1,0 +1,98 @@
+# Credit to https://blog.digitalis.io/containerized-cassandra-cluster-for-local-testing 60d24d70dcc4
+# and https://github.com/digitalis-io/ccc
+
+# Setup:
+#   $ ./setup_cluster.sh
+#   use -a flag to enable authentication
+# Start:
+#   $ docker-compose -f docker-compose-cassandra-cluster.yaml up -d
+# Cluster Status
+#   $ docker exec node1 nodetool status
+# Test with some CQL
+#   $ docker exec -it node1 cqlsh -e "DESCRIBE KEYSPACES"
+# For authentication and authorisation, modify cassandra.yaml
+#   authenticator: PasswordAuthenticator
+#   authorizer: CassandraAuthorizer
+# login to one node with -u cassandra -p cassandra
+#   $ docker exec -it node1 cqlsh -u cassandra -p cassandra -e "DESCRIBE KEYSPACES"
+
+# alter one node to propogate to ring with
+#    ALTER USER cassandra WITH PASSWORD 'NEW_PASSWORD'
+# or add new user
+#    CREATE ROLE <new_super_user> WITH PASSWORD = '<some_secure_password>'
+#    AND SUPERUSER = true
+#    AND LOGIN = true;
+# Default user cassandra uses quorum consistency level, other created users uses local_one
+# Need to increase replication factor else can be denied access if the single replica is down
+#   ALTER KEYSPACE "system_auth"
+#   WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'TestDataCentre' : 3};
+# To propogate replication changes, run
+#   $ docker exec node1 nodetool repair system_auth
+
+version: "3.8"
+networks:
+  cassandra:
+services:
+  node1:
+    image: cassandra:4.0.3
+    container_name: node1
+    hostname: node1
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - cassandra
+    ports:
+      - "9042:9042"
+    volumes:
+      - ./data/node1:/var/lib/cassandra #Data volume
+      - ./etc/node1:/etc/cassandra #Config file volume
+    environment: &environment
+      CASSANDRA_SEEDS: "node1,node2"
+      CASSANDRA_CLUSTER_NAME: CassandraClusterTesting
+      CASSANDRA_DC: TestDataCentre
+      CASSANDRA_RACK: TestRack
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_NUM_TOKENS: 128
+  node2:
+    image: cassandra:4.0.3
+    container_name: node2
+    hostname: node2
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - cassandra
+    ports:
+      - "9043:9042"
+    volumes:
+      - ./data/node2:/var/lib/cassandra
+      - ./etc/node2:/etc/cassandra
+    environment: *environment
+    depends_on:
+      node1:
+        condition: service_healthy
+  node3:
+    image: cassandra:4.0.3
+    container_name: node3
+    hostname: node3
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - cassandra
+    ports:
+      - "9044:9042"
+    volumes:
+      - ./data/node3:/var/lib/cassandra
+      - ./etc/node3:/etc/cassandra
+    environment: *environment
+    depends_on:
+      node2:
+        condition: service_healthy
