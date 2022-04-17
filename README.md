@@ -8,3 +8,5 @@ Useful docker scripts for rapidly creating dev environments
   - [x] Single node
   - [x] Cluster
 - [ ] Postgres
+  - [ ] Single node
+  - [ ] Cluster
